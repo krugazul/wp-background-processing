@@ -15,6 +15,7 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 	 */
 	abstract class WP_Background_Process extends WP_Async_Request {
 
+
 		/**
 		 * Action
 		 *
@@ -50,6 +51,24 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 		 * @access protected
 		 */
 		protected $cron_interval_identifier;
+
+		/**
+		 * Batch Key
+		 *
+		 * @var mixed
+		 * @access protected
+		 */
+		protected $key;
+
+		/**
+		 * Batch ID
+		 *
+		 * @var mixed
+		 * @access protected
+		 */
+		protected $batch_id;
+
+
 
 		/**
 		 * Initiate new background process
@@ -98,6 +117,9 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 		 */
 		public function save() {
 			$key = $this->generate_key();
+
+			$this->set_key( $key );
+			$this->key = $this->get_key();
 
 			if ( ! empty( $this->data ) ) {
 				update_site_option( $key, $this->data );
@@ -282,6 +304,7 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 
 			$batch       = new stdClass();
 			$batch->key  = $query->$column;
+			$batch->id  = $query->$key_column;
 			$batch->data = maybe_unserialize( $query->$value_column );
 
 			return $batch;
@@ -300,7 +323,7 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 				$batch = $this->get_batch();
 
 				foreach ( $batch->data as $key => $value ) {
-					$task = $this->task( $value );
+					$task = $this->task( $value, $batch->id, $batch->key );
 
 					if ( false !== $task ) {
 						$batch->data[ $key ] = $task;
@@ -497,10 +520,51 @@ if ( ! class_exists( 'WP_Background_Process' ) ) {
 		 * item from the queue.
 		 *
 		 * @param mixed $item Queue item to iterate over.
+		 * @param $batch_id
 		 *
 		 * @return mixed
 		 */
-		abstract protected function task( $item );
+		abstract protected function task( $item, $batch_id, $batch_key );
+
+		/**
+		 * Sets the current key
+		 *
+		 * @param bool $key
+		 * @return void
+		 */
+		public function set_batch_id( $key = false ) {
+			$this->batch_id = $key;
+		}
+
+		/**
+		 * Sets the get_batch_id
+		 *
+		 * @param bool $key
+		 * @return string
+		 */
+		public function get_batch_id( ) {
+			return $this->batch_id;
+		}
+
+		/**
+		 * Sets the current key
+		 *
+		 * @param bool $key
+		 * @return void
+		 */
+		public function set_key( $key = false ) {
+			$this->key = $key;
+		}
+
+		/**
+		 * Sets the get_batch_id
+		 *
+		 * @param bool $key
+		 * @return string
+		 */
+		public function get_key( ) {
+			return $this->key;
+		}
 
 	}
 }
